@@ -1,0 +1,4 @@
+# -> if u've got -> bash: /dev/ttyUSB0: Permission denied
+sudo chmod 666 /dev/ttyUSB0
+sudo screen /dev/ttyUSB0 9600
+
