@@ -1,9 +1,10 @@
 # Melon Green
-## Setup *Melon Green* to board's AVR
+## Program *Melon Green* board's AVR
 
 ### Step 1.
 ### Customize the Code
-All the settings are accessible from [Serial Command Line Interface](3_Serial_Command_Line_Interface.md), except DHT (Humidity & Temperature) sensor type, RTC (Real Time Clock) module type, Duration of Manual Diagnostics & current Century. To change those settings please edit `Melon_Green\modules\Settings.h`.
+All the settings are accessible from [Serial Command Line Interface](3_Serial_Command_Line_Interface.md), except DHT (Humidity & Temperature) sensor type, RTC (Real Time Clock) module type, Duration of Manual Diagnostics & current Century. To change those settings please edit the file `Melon_Green\modules\Settings.h` like this:
+
 
 ```
  #define RTCMODULE RTC_DS3231
@@ -11,12 +12,14 @@ All the settings are accessible from [Serial Command Line Interface](3_Serial_Co
  #define DiagMaxMilliSecond 30000 // (milliseconds)
  #define century 2000
 ```
+
 These are possible values:  
 *   Real Time Clock Module Types: RTC_DS3231, RTC_DS1307, RTC_PCF8523, RTC_PCF8563  
 *   Humidity & Temperature Module: DHT22 (AM2302), DHT21, DHT11 (AM2301)  
-If you like to use other sensors, take a look at `Melon_Green\Melon_Green.ino` under the 'Required Libraries & Structures'.
 
-If you're not interested to use RTC, DHT or Feeding Solution Mixer, exclude appropriated *_indicator* from `Melon_Green\Melon_Green.ino`, right under `Modes \[User Editable]` comment line:
+If you like to use any other sensors, you need to midify the code. Take a look at `Melon_Green\Melon_Green.ino` (under the part marked with the comment 'Required Libraries & Structures') and `Melon_Green\modules\Essential_Functions.h`.
+
+If you're not interested to use RTC, DHT or Feeding Solution Mixer, exclude related *_indicator* from `Melon_Green\Melon_Green.ino`, right under `Modes [User Editable]` comment line:
 
 ```
 // Modes [User Editable]
@@ -25,16 +28,19 @@ If you're not interested to use RTC, DHT or Feeding Solution Mixer, exclude appr
  #define _Mixer // Mix Feeding Solution Using Two Pumps and a Container
  #define _Serial // Serial Communication With Board (RECOMMENDED)
 ```
-**Caution! Toggling `#define _RTC` *ON* and lack of RTC Module (I2C Slave) simultaneously, might freezes your board.**  
+**Caution! Toggling `#define _RTC` *ON* and lack of RTC Module (I2C), might freeze your board.**  
+
+*Note! RTC is now required.*   
+
 
 ### Step 2.
 ### Compilation
-Melon Green has developed under [Arduino/Wiring](https://en.wikipedia.org/wiki/Arduino#Software_development) platform.  
+Melon Green has been developed under [Arduino/Wiring](https://en.wikipedia.org/wiki/Arduino#Software_development) platform.  
 Please follow these steps to compile & upload M.G.'s operating software to AVR:
 1. Download [Arduino IDE](https://www.arduino.cc/en/main/software) and set it up.
 2. Download project repo & open the sketch file: `Melon_Green\Melon_Green.ino`.  
 **\[Dependencies]**  
-*You must have the following libraries installed: Adafruit's [DHT](https://github.com/adafruit/DHT-sensor-library), [RTClib](https://github.com/adafruit/RTClib) and PaulStoffregen's [Time library for Arduino](https://github.com/PaulStoffregen/Time). For more information please check this official article about [Installing Additional Arduino Libraries](https://www.arduino.cc/en/guide/libraries).*  
+*You must have the following libraries installed: Adafruit's [DHT](https://github.com/adafruit/DHT-sensor-library), [RTClib](https://github.com/adafruit/RTClib) (+ Dependencies) and PaulStoffregen's [Time library for Arduino](https://github.com/PaulStoffregen/Time). For more information please check this official article about [Installing Additional Arduino Libraries](https://www.arduino.cc/en/guide/libraries).*  
 3. If you're using Arduino board (~UNO), skip to [2.3. Uploading to board (AVR) - Arduino Version](#arduino-version), otherwise...
 4. Select the board type:  
 `Menu-bar -> Tools -> Board... -> Arduino/Genuino Uno`.
@@ -43,7 +49,7 @@ Please follow these steps to compile & upload M.G.'s operating software to AVR:
 
 ![](2_Upload_Melon_Green_to_AVR/Compile_Code.gif)  
 
-After a while, IDE's Status-bar says "Done compiling" & you have new `.hex` files in `\Melon_Green` directory, right by `.ino` file. All right. Now we are going to Upload it.
+After a while, IDE's Status-bar says "Done compiling" & you have new `.hex` files in `\Melon_Green` directory, right by the `.ino` file's side.  
 
 
 ### Step 3.
@@ -75,7 +81,7 @@ Requirements:
 **1. Setup your Programmer & Connect it to the AVR.**  
 *E.g. USBasp with 10 pin wiring & ATmega328p (AVR) :*  
 \+ *Win OS, requires a driver for USBasp: [Zadig (driver installation tool)](http://zadig.akeo.ie/) helps.*  
-\+ Make sure that M.G's Jumpers is disconnected, to avoid unwanted flows.  
+\+ Make sure that M.G's Jumpers are disconnected, to avoid unwanted flows.  
 
 | pin | USBasp | ATmega328p | description |
 |:---:|:--------:|:----------:|:-----------:|
@@ -95,18 +101,18 @@ This is the AVRDUDE command:
 ```
 $ avrdude -c usbasp-clone -p m328p -P usb -e -U flash:w:"path/to/Melon_Green.ino.standard.hex":a
 ```
-You may prefer to use a GUI as helping hand, like Zak Kemble's [AVRDUDESS](https://github.com/zkemble/AVRDUDESS). It's OK.
-Open it plz. You'll see a form-like interface. Follow these steps:  
--   Select ``Any usbasp clone with correct VID/PID`` from ***Programmer (-c)*** drop-down list.  
--   Select `ATmega328p` from ***MCU (-p)*** drop-down list.  
--   Look for a fieldset called ***Fuses & lock bits*** (right, 3rd row). click on 1st `Read` button.  
--   If got `0xFF, 0xDE, 0x05` fuse bits, go ahead. The AVR is well connected & ready.  
--   From ***Flash*** field-set, browse compiled [Binary '.hex' flash](#compilation) of Melon Green. Select `Write` radio-button & `Auto...` from ***Format*** drop-down.  
--   Select `Erase flash and EEPROM (-e)` from ***Options***.  
--   click on **Program!** button and wait a moment.  
+You may prefer to use a GUI like Zak Kemble's [AVRDUDESS](https://github.com/zkemble/AVRDUDESS). It's OK.
+If you open it, you'll see a form-like interface. Follow these steps:  
+-   Select ``Any usbasp clone with correct VID/PID`` from the ***Programmer (-c)*** drop-down list.  
+-   Select `ATmega328p` from the ***MCU (-p)*** drop-down list.  
+-   Look for a fieldset called ***Fuses & lock bits*** (right, 3rd row). click on the 1st `Read` button.  
+-   You'll probably get `0xFF, 0xDE, 0x05` fuse bits, go ahead. The AVR is well connected & ready.  
+-   From the ***Flash*** field-set, browse the compiled [Binary '.hex' flash](#compilation) of Melon Green. Select `Write` radio-button & `Auto...` from ***Format*** drop-down.  
+-   Select `Erase flash and EEPROM (-e)` from teh ***Options***.  
+-   click on the **Program!** button and wait a moment.  
 AVRDUDE writes the flash and verifies it.  
 
-![How to use AVRDUDESS GUI](2_Upload_Melon_Green_to_AVR/Write_.hex_Flash_to_AVR.gif)
+![](2_Upload_Melon_Green_to_AVR/Write_.hex_Flash_to_AVR.gif)
 
 Fine.  
 Happy Gardening!
