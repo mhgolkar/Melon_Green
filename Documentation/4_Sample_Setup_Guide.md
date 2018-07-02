@@ -6,7 +6,7 @@ Melon Green is a controller board which is useful to operate any electronically 
 ![Setup Guide Schematic](4_Sample_Setup_Guide/Setup_Guide_Schematic.jpg)  
 
 ### How to Power up the board
-[Melon Green v1.0.0](../Melon_Green_v1.0.0.fzz) uses a common power path to relays and main electronic parts (including AVR Microcontroller through a 7805 regulator). Because an AVR can tolerate currents less than ~500mA (~50mA for IO pins), sometimes it's wise to separate power sources for relays. In such cases, please use newer versions which have some jumpers to switch between Int/Ext power source for relays.  
+The older Melon Green v1.0.0 uses a common power path to relays and main electronic parts (including AVR Microcontroller through a 7805 regulator). Because an AVR can tolerate currents less than ~500mA (~50mA for IO pins), sometimes it's wise to separate power sources for relays. In such cases, please use newer versions which have some jumpers to switch between Int/Ext power source for relays.  
 1. **J0** is the power source inlet. 7-12 V DC is OK. An AC to DC adapter is needed for normal house outlets. A Nine-volt heavy-duty battery works too.  
 2. **J10 & J11** are jumpers which switch the Internal/External current to relays. J10 for negative terminal (Ground) and J11 for positive terminal (Vcc).  
 *Note! Change both of them together.*
