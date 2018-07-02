@@ -1,17 +1,28 @@
 /*
- * Melon Green v1.0.0
+ * Melon Green v1.2.0
  * Morteza H. Golkar
- * 2017
+ * 2018
  * ------------------------------------------
  * Serial Command Line Interface (Debug Mode)
  * ------------------------------------------
 */
 
+void SerialPageBreak(){
+    //Serial.write(12);
+    Serial.write(27);
+    Serial.print("[2J");
+    Serial.write(27);
+    Serial.print("[H");
+}
 void setupSerial(){
     Serial.begin(BAUDRATE);
-	//while(!Serial.available()){};
-    Serial.write(12); // Page Break in [Standard] Terminal (Doesn't work for Arduino IDE Serial Monitor)
-    Serial.println( F("Welcome. It's.. ") ); Serial.println( Melon_Green_Info  );
+	//while( Serial.available() < 1 ){};
+    SerialPageBreak(); // Page Break in [Standard] Terminal (Doesn't work for Arduino IDE Serial Monitor)
+    Serial.println( F( Welcome_Message ) ); Serial.println( F( Melon_Green_Info )  );
+}
+void endSerial(){
+    	//Serial.flush();
+		Serial.end();
 }
 // Debug Mode
 void toggleDebugMode(){
@@ -22,28 +33,29 @@ void toggleDebugMode(){
 		debugMode = true;
 	} else if( debugMode == true && digitalRead(DEBM) == LOW ) {
         debugMode = false;
-		Serial.flush();
-		Serial.end();
+        #ifdef _Serial
+            endSerial();
+        #endif
     }
 }
+// Serial Command Line Interface
 void serialCLI(){
-    // Serial Command Line Interface
     // Serial Event
     if (stringComplete) {
         if(cliStep == 0) { command = inputString.toInt(); }
         // Menus
         if( command == 0 ){ // Prints Main Menu
-            if(cliStep == 0) { if(firstrun != true){ Serial.write(12); } else { firstrun = false; } } else { cliStep = 0; }
+            if(cliStep == 0) { if(firstrun != true){ SerialPageBreak(); } else { firstrun = false; } } else { cliStep = 0; }
             Serial.println( F("MAIN MENU\r\n---------\r\n[1] Reading Sensors \r\n[2] Calibration \r\n[3] Manual Diagnostics\r\n[4] Settings >>") );
             Serial.println( F("-------------------\r\n* All Commands are Unique\r\n[0]  Main Menu") );
             if(parametering == false) { Serial.println( F("[99] Disable All Functions") ); } else { Serial.println( F("[99] Enable All Functions") ); }
         }
-        if( command == 1 ){ Serial.write(12); Serial.println( F("READING SENSORS\r\n---------------\r\n[5]  Time & Date\r\n[6]  Humidity & Temperature\r\n[7]  Day Light Intensity\r\n[8]  Soil Moisture \r\n[9]  Food Tank\r\n[10] Rain Detection >>") ); } // Prints Sensor Reading Menu
-        if( command == 2 ){ Serial.write(12); Serial.println( F("CALIBRATION\r\n-----------\r\nDay Light Sensor (LDR) [11] Min [12] Max \r\nSoil Moisture [13] Min [14] Max \r\nFood Tank [15] Min [16] Max >>") ); } // Prints Calibration Menu
-        if( command == 3 ){ Serial.write(12); Serial.println( F("MANUAL DIAGNOSTICS\r\n------------------\r\n[17] Irrigation\r\n[18] Grow Light Supply\r\n[19] Fan / Cooler\r\n[20] Heater\r\n[21] Fogger\r\n-----------\r\n* Use for Diagnosis Only (Auto Off)\r\n[22] Stop All >>") ); } // Prints Manual Diagnostics Menu
+        if( command == 1 ){ SerialPageBreak(); Serial.println( F("[1] READING SENSORS\r\n-------------------\r\n[5]  Time & Date\r\n[6]  Humidity & Temperature\r\n[7]  Day Light Intensity\r\n[8]  Soil Moisture \r\n[9]  Food Tank\r\n[10] Rain Detection >>") ); } // Prints Sensor Reading Menu
+        if( command == 2 ){ SerialPageBreak(); Serial.println( F("[2] CALIBRATION\r\n---------------\r\nDay Light Sensor (LDR) [11] Min [12] Max \r\nSoil Moisture [13] Min [14] Max \r\nFood Tank [15] Min [16] Max >>") ); } // Prints Calibration Menu
+        if( command == 3 ){ SerialPageBreak(); Serial.println( F("[3] MANUAL DIAGNOSTICS\r\n----------------------\r\n[17] Irrigation\r\n[18] Grow Light Supply\r\n[19] Fan / Cooler\r\n[20] Heater\r\n[21] Humidifier\r\n-----------\r\n* Use for Diagnosis Only (Auto Off)\r\n[22] Stop All >>") ); } // Prints Manual Diagnostics Menu
         if( command == 4 ){ // Settings Menu
-            Serial.write(12);
-            Serial.print( F("SETTINGS\r\n--------\r\n[23] Time, Date & Regional\r\n[24] Irrigation\r\n[25] Grow Light Supplier\r\n[26] Temperature & Humidity Control") );
+            SerialPageBreak();
+            Serial.print( F("[4] SETTINGS\r\n------------\r\n[23] Time, Date & Regional\r\n[24] Irrigation\r\n[25] Grow Light Supplier\r\n[26] Temperature & Humidity Control") );
             #ifdef _Mixer
                 Serial.println( F("\r\n[27] Feeding Solution >>") );
             #else
@@ -51,8 +63,8 @@ void serialCLI(){
             #endif
         }
         if( command == 23 ){ // time, date & regional settings menu
-            Serial.write(12);
-            Serial.println( F("TIME, DATE & REGIONAL\r\n------------------") );
+            SerialPageBreak();
+            Serial.println( F("[23] TIME, DATE & REGIONAL\r\n-----------------------") );
 			/*
             Serial.print( F("[..] Coordinates: ") ); Serial.print( EEPROM.read(EELatitude) ); if( EEPROM.read(EEQuadrant) < 2 ){ Serial.print("'N "); } else{ Serial.print("'S "); } Serial.print( EEPROM.read(EELongitude) ); if( (EEPROM.read(EEQuadrant)%2) == 0 ){ Serial.println("'W "); } else{ Serial.println("'E "); }
             Serial.print( F("[..] UTC (Minutes): ") ); if( (EEPROM.read(EEQuadrant)%2) == 0 ){ Serial.print("-"); } else{ Serial.print("+"); } Serial.println( EEPROM.read(EEUTCMinutes) );
@@ -63,8 +75,8 @@ void serialCLI(){
             Serial.print( F("[30] Date & Time: ") ); printDateTime();
         }
         if( command == 24 ){ // Irrigation Settings Menu
-            Serial.write(12);
-            Serial.println( F("IRRIGATION\r\n----------") );
+            SerialPageBreak();
+            Serial.println( F("[24] IRRIGATION\r\n---------------") );
             Serial.print( F("[31] On Soil Moisture Below: ") ); if( (int)EEPROM.read(EEIrigTrigSmt) >= 100 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EEIrigTrigSmt) ); Serial.println(" %");}
             Serial.print( F("[32] Scheduled Task; Every: ") ); if( (int)EEPROM.read(EEIrigTrigInt) == 0 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EEIrigTrigInt) ); if( EEPROM.read(EEIrigIntUnit) == 0) { Serial.println(" Minutes"); } else if( EEPROM.read(EEIrigIntUnit) == 2) { Serial.println(" Days"); } else if( EEPROM.read(EEIrigIntUnit) == 3) { Serial.println(" Weeks"); } else if( EEPROM.read(EEIrigIntUnit) == 4) { Serial.println(" Months"); } else { EEPROM.update(EEIrigIntUnit, 1); Serial.println(" Hours"); } }
             Serial.print( F("[33] Next Irrigation: ") ); if ( (int)EEPROM.read(EEIrigTrigInt) == 0 ) { Serial.println("OFF"); } else { printNextIrrigation(); }
@@ -76,34 +88,35 @@ void serialCLI(){
             Serial.print( F("[37] Don't Irrigate if It's Rainy: ") ); if( (int)EEPROM.read(EEIrigLimRin) == 0 ) { Serial.println("OFF"); } else { Serial.println("ON");}
             Serial.print( F("[38] Maximum Allowable Soil Moisture: ") ); if( (int)EEPROM.read(EEIrigLimSmt) == 0 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EEIrigLimSmt) ); Serial.println(" %"); }
             Serial.print( F("[39] Duration of Each Irrigation: ") ); if( (int)EEPROM.read(EEIrigLimTim) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEIrigLimTim) ); Serial.println(" Minutes"); }
-			Serial.println( F("----------------------------\r\nCaution! [38]/[39] is Required.") );
+            Serial.print( F("[51] Maximum Irrigation per Day: ") ); if( (int)EEPROM.read(EEIrigMaxpDay) == 0 ) { Serial.println("NULL [Dangerous]"); } else { Serial.print( EEPROM.read(EEIrigMaxpDay) ); Serial.print(" Minutes [- "); Serial.print(Total_Irrig_per_Day); Serial.println("]"); }
+			Serial.println( F("----------------------------\r\nNote: [51] keeps minutes after each irrigation in short-term memory.\r\n[38] & [39] are Recommended.") );
         }
         if( command == 25 ){// Grow Light Supply Settings Menu
-            Serial.write(12);
-            Serial.println( F("GROW LIGHT SUPPLIER\r\n-------------------") );
+            SerialPageBreak();
+            Serial.println( F("[25] GROW LIGHT SUPPLIER\r\n------------------------") );
             Serial.print( F("[40] Scheduled Task; Every: ") ); if( (int)EEPROM.read(EEGrowTrigInt) == 0 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EEGrowTrigInt) ); if( EEPROM.read(EEGrowIntUnit) == 0) { Serial.println(" Minutes"); } else if( EEPROM.read(EEGrowIntUnit) == 2) { Serial.println(" Days"); } else if( EEPROM.read(EEGrowIntUnit) == 3) { Serial.println(" Weeks"); } else if( EEPROM.read(EEGrowIntUnit) == 4) { Serial.println(" Months"); } else { EEPROM.update(EEGrowIntUnit, 1); Serial.println(" Hours"); } }
 			Serial.print( F("[41] Next Supplement: ") ); if ( (int)EEPROM.read(EEGrowTrigInt) == 0 ) { Serial.println("OFF"); } else { printNextGrowLight(); }
             Serial.print( F("[42] Each Task Duration: ") ); if( (int)EEPROM.read(EEGrowEachDuration) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEGrowEachDuration) ); Serial.println(" Minutes"); }
             Serial.print( F("[43] Turn G.L. ON if It's Darker Than: ") ); if( (int)EEPROM.read(EEGrowTrigMin) >= 100 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEGrowTrigMin) ); Serial.println(" %");}
             Serial.print( F("[44] Turn G.L. OFF if It's Brighter Than: ") ); if( (int)EEPROM.read(EEGrowTrigMax) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEGrowTrigMax) ); Serial.println(" %");}
 			Serial.print( F("[45] Supply Grow Light during Day & Before: ") ); if( (int)EEPROM.read(EEGrowLightSupplyBefore) > 23 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEGrowLightSupplyBefore) ); Serial.println( F(" O'clock") );}
-			Serial.println( F("-----------------------------------\r\nNotice: Keep LDR Away From Grow Light Supplier Sources.\r\n[44] Must be Higher than [43]") );
+			Serial.println( F("-----------------------------------\r\nNotice: Keep LDR Away From Grow Light Supplier Sources.") );
         }
         if( command == 26 ){ // temperature & humidity control Settings Menu
-            Serial.write(12);
+            SerialPageBreak();
 			#ifdef _DHT
-                Serial.println( F("TEMPERATURE & HUMIDITY CONTROL\r\n------------------------------") );
-                Serial.print( F("[46] Keep Temperature About: ") ); if( (int)EEPROM.read(EETempHumCTemp) == 0 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EETempHumCTemp) ); Serial.print(" {+/- "); Serial.print( EEPROM.read(EETempHumCTTol) ); Serial.println("} 'C"); }
-                Serial.print( F("[47] Keep Humidity About: ") ); if( (int)EEPROM.read(EETempHumCHum) == 0 ) { Serial.println("OFF"); } else { Serial.print( EEPROM.read(EETempHumCHum) ); Serial.print(" {+/- "); Serial.print( EEPROM.read(EETempHumCHTol) ); Serial.print("} %"); if( (int)EEPROM.read(EEFANCforDeHumid) == 1 ){ Serial.println( F(" +FAN+") ); } else { Serial.println(); } }
-                Serial.println( F("-------------------------------\r\n* It Works With Fogger, Cooler & Heater [Relays].") );
+                Serial.println( F("[26] TEMPERATURE & HUMIDITY CONTROL\r\n-----------------------------------") );
+                Serial.print( F("[46] Keep Temperature About:\r\n\t ") ); if( (int)EEPROM.read(EETempHumCTemp) == 0 ) { Serial.print("OFF"); } else { Serial.print( EEPROM.read(EETempHumCTemp) ); } Serial.print(" Day | "); if( (int)EEPROM.read(EETempHumCTempNight) == 0 ) { Serial.print("OFF"); } else { Serial.print( EEPROM.read(EETempHumCTempNight) ); } Serial.print(" Night {+/- "); Serial.print( EEPROM.read(EETempHumCTTol) ); Serial.println("} 'C");
+                Serial.print( F("[47] Keep Humidity About:\r\n\t ") ); if( (int)EEPROM.read(EETempHumCHum) == 0 ) { Serial.print("OFF"); } else { Serial.print( EEPROM.read(EETempHumCHum) ); } Serial.print(" Day | "); if( (int)EEPROM.read(EETempHumCHumNight) == 0 ) { Serial.print("OFF"); } else { Serial.print( EEPROM.read(EETempHumCHumNight) ); } Serial.print(" Night {+/- "); Serial.print( EEPROM.read(EETempHumCHTol) ); Serial.print("} %"); if( (int)EEPROM.read(EEFANCforDeHumid) == 1 ){ Serial.println( F(" +FAN+") ); } else { Serial.println(); }
+                Serial.println( F("-------------------------------\r\n* It Works With Humidifier, Cooler & Heater Functions.") );
 			#else
 				Serial.println( F("UNAVAILABLE (COMPILED WITHOUT DHT)") );
 			#endif
         }
         #ifdef _Mixer
             if( command == 27 ){ // Feeding Solution Settings Menu
-                Serial.write(12);
-                Serial.println( F("FEEDING SOLUTION\r\n----------------") );
+                SerialPageBreak();
+                Serial.println( F("[27] FEEDING SOLUTION\r\n---------------------") );
                 Serial.print( F("[48] Fertilizer Rate: ") ); if( (int)EEPROM.read(EEFeedFrtlzRate) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEFeedFrtlzRate) ); Serial.println(" % of Solution"); }
                 Serial.print( F("[49] Fertilizer Pump Flow Rate: ") ); if( (int)EEPROM.read(EEFeedFrtlzFlow) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEFeedFrtlzFlow) ); Serial.println(" Liter/Sec"); }
                 Serial.print( F("[50] Solution Container volume: ") ); if( (int)EEPROM.read(EEFeedContainer) == 0 ) { Serial.println("NULL"); } else { Serial.print( EEPROM.read(EEFeedContainer) ); Serial.println(" Liter"); }
@@ -187,7 +200,7 @@ void serialCLI(){
 		}
         if( command == 30 ){ // Date & Time Adjustment
             if(cliStep == 0){
-                Serial.println( F("What Year is it? (Two Digits: 2017 -> 17)") );
+                Serial.println( F("What Year is it? (Two Digits: 2018 -> 18)") );
                 cliStep = 1;
             } else if(cliStep == 1){
                 EEPROM.update(EEYear, inputString.toInt());
@@ -212,10 +225,17 @@ void serialCLI(){
             } else if (cliStep == 6) {
                 EEPROM.update(EESecond, inputString.toInt());
                 //adjust:
-                #ifdef _RTC
+                /*
+                // (1.2.0 r0)
+                #ifdef _RTC 
                     rtc.adjust(DateTime((int)((int)EEPROM.read(EEYear) + century), (int)EEPROM.read(EEMonth), (int)EEPROM.read(EEDay), (int)EEPROM.read(EEHour), (int)EEPROM.read(EEMinute), (int)EEPROM.read(EESecond)));
                 #endif
+                */
                 setTime((int)EEPROM.read(EEHour), (int)EEPROM.read(EEMinute), (int)EEPROM.read(EESecond), (int)EEPROM.read(EEDay), (int)EEPROM.read(EEMonth), (int)EEPROM.read(EEYear));
+                // 1.2.0 r2
+                #ifdef _RTC
+                    rtc.adjust(now());
+                #endif  
                 cliStep = 0;
                 inputString = "23";
                 return;
@@ -244,7 +264,7 @@ void serialCLI(){
                 EEPROM.update(EEIrigIntUnit, inputString.toInt() );
                 cliStep = 0;
                 inputString = "33";
-				if( EEPROM.read(EENextIrigMonth) > 12 || EEPROM.read(EENextIrigMonth) < 1 ){ inputString = "33"; } else { inputString = "24"; };
+				        if( EEPROM.read(EENextIrigMonth) > 12 || EEPROM.read(EENextIrigMonth) < 1 ){ inputString = "33"; } else { inputString = "24"; };
                 return;
             }
         }
@@ -254,7 +274,7 @@ void serialCLI(){
                 cliStep == 0;
             } else {
                 if(cliStep == 0){
-                    Serial.println( F("Year? (Two Digits: 2017 -> 17)") );
+                    Serial.println( F("Next Task: Year? (Two Digits: 2018 -> 18)") );
                     cliStep = 1;
                 } else if(cliStep == 1){
                     EEPROM.update(EENextIrigYear, inputString.toInt() );
@@ -275,7 +295,7 @@ void serialCLI(){
                 } else if (cliStep == 5) {
 					EEPROM.update(EENextIrigMinute, inputString.toInt() );
                     cliStep = 0;
-                    inputString = "24";
+                    if( EEPROM.read(EEIrigLimTim) == 0 ){ inputString = "39"; } else { inputString = "24"; };
                     return;
                 }
             }
@@ -369,7 +389,7 @@ void serialCLI(){
                 cliStep == 0;
             } else {
                 if(cliStep == 0){
-                    Serial.println( F("Year? (Two Digits: 2017 -> 17)") );
+                    Serial.println( F("Next Task: Year? (Two Digits: 2018 -> 18)") );
                     cliStep = 1;
                 } else if(cliStep == 1){
                     EEPROM.update(EENextGrowYear, inputString.toInt() );
@@ -390,7 +410,8 @@ void serialCLI(){
                 } else if (cliStep == 5) {
 					EEPROM.update(EENextGrowMinute, inputString.toInt() );
                     cliStep = 0;
-                    inputString = "25";
+                    //inputString = "25";
+                    if( EEPROM.read(EEGrowEachDuration) > 0 ){ inputString = "25"; } else { inputString = "42"; };
                     return;
                 }
             }
@@ -402,7 +423,8 @@ void serialCLI(){
             } else if (cliStep == 1) {
                 EEPROM.update(EEGrowEachDuration, inputString.toInt() );
                 cliStep = 0;
-                inputString = "25";
+                //inputString = "25";
+                if( EEPROM.read(EEGrowTrigMax) > 0 ){ inputString = "25"; } else { inputString = "44"; };
                 return;
             }
         }
@@ -445,10 +467,14 @@ void serialCLI(){
                 Serial.println( F("Keep Temperature About: ('C, 0 -> OFF)") );
                 cliStep = 1;
             } else if (cliStep == 1) {
-                Serial.println( F("Tolerance? ('C) ") );
+                Serial.println( F("...& for Night-time? ('C, 0 -> OFF) ") );
                 EEPROM.update(EETempHumCTemp, inputString.toInt() );
                 cliStep = 2;
             } else if (cliStep == 2) {
+                Serial.println( F("Tolerance?") );
+                EEPROM.update(EETempHumCTempNight, inputString.toInt() );
+                cliStep = 3;
+            } else if (cliStep == 3) {
                 EEPROM.update(EETempHumCTTol, inputString.toInt() );
                 cliStep = 0;
                 inputString = "26";
@@ -460,14 +486,18 @@ void serialCLI(){
                 Serial.println( F("Keep Humidity About: (%, 0 -> OFF)") );
                 cliStep = 1;
             } else if (cliStep == 1) {
-                Serial.println( F("Tolerance?") );
+                Serial.println( F("...& for Night-time? (%, 0 -> OFF) ") );
                 EEPROM.update(EETempHumCHum, inputString.toInt() );
                 cliStep = 2;
             } else if (cliStep == 2) {
-                Serial.println( F("Use Fan/Cooler to Reduce Humidity: [1] YES [2] NO") );
-                EEPROM.update(EETempHumCHTol, inputString.toInt() );
+                Serial.println( F("Tolerance?") );
+                EEPROM.update(EETempHumCHumNight, inputString.toInt() );
                 cliStep = 3;
             } else if (cliStep == 3) {
+                Serial.println( F("Use Fan/Cooler to Reduce Humidity: [1] YES [2] NO") );
+                EEPROM.update(EETempHumCHTol, inputString.toInt() );
+                cliStep = 4;
+            } else if (cliStep == 4) {
                 EEPROM.update(EEFANCforDeHumid, inputString.toInt() );
                 cliStep = 0;
                 inputString = "26";
@@ -509,6 +539,17 @@ void serialCLI(){
                 return;
             }
         }
+        if( command == 51 ){ // Solution Container Volume
+            if(cliStep == 0){
+                Serial.println( F("Maximum Irrigation per Day: (Minutes, 0 -> Null)") );
+                cliStep = 1;
+            } else if (cliStep == 1) {
+                EEPROM.update(EEIrigMaxpDay, inputString.toInt() );
+                cliStep = 0;
+                inputString = "24";
+                return;
+            }
+        }
         #endif
         // Action
         if( command == 5 ){
@@ -543,40 +584,74 @@ void serialCLI(){
         if( command == 8 ){
             // Soil Moisture
             Moist();
-            Serial.print( F("Soil Mositure [%]: ") );  Serial.println(moist);
+            if (smt_status >= (DENOISEA-1)){
+              Serial.print( F("Soil Mositure [%]: ") );  Serial.println(moist);
+              smt_reset();
+            } else { Moist(); return; }
         }
         if( command == 9 ){
             // Food Tank
             int status = Food();
-            Serial.print(food);
-            if( status == 1 ){
-                Serial.println( F("-> FT Less than Minimum.") );
-            } else if( status == 2 ) {
-                Serial.println( F("-> FT Normal.") );
-            } else if ( status == 3 ){
-                Serial.println( F("-> FT Maximum.") );
-            } else {
-                Serial.println( F("-> Ambiguous!") );
-			}
+            if (fdt_status >= (DENOISEA-1)){
+              Serial.print(food);
+              if( status == 1 ){
+                  Serial.println( F("-> FT Minimum.") );
+              } else if( status == 2 ) {
+                  Serial.println( F("-> FT Normal.") );
+              } else if ( status == 3 ){
+                  Serial.println( F("-> FT Maximum.") );
+              } else {
+                  Serial.println( F("-> Ambiguous!") );
+  			      }
+              fdt_reset();
+          } else { Food(); return; }
         }
 		if( command == 10  ){ if ( itsRainy() == true  ){ Serial.println( F("It's Rainy") ); } else { Serial.println( F("Dry") );} };
         // Calibration
-        if( command == 11  ){ EEPROM.update(EELdrMin, Ldr()); Serial.print(EEPROM.read(EELdrMin)); Serial.println( F("-> LDR.Min")  );} // Minimum Light
-        if( command == 12  ){ EEPROM.update(EELdrMax, Ldr()); Serial.print(EEPROM.read(EELdrMax)); Serial.println( F("-> LDR.Max")  );} // Maximum Light
-        if( command == 13  ){ EEPROM.update(EESmtMin, Moist()); Serial.print(EEPROM.read(EESmtMin)); Serial.println( F("-> SM.Min")  );} // Minimum Soil Moisture
-        if( command == 14  ){ EEPROM.update(EESmtMax, Moist()); Serial.print(EEPROM.read(EESmtMax)); Serial.println( F("-> SM.Max")  );} // Maximum Soil Moisture
-        if( command == 15 ){ Food(); EEPROM.update(EEFscMin,  food); Serial.print(EEPROM.read(EEFscMin)); Serial.println( F("-> FT.Min")  );} // Minimum Detector in Food Tank
-        if( command == 16 ){ Food(); EEPROM.update(EEFscMax,  food); Serial.print(EEPROM.read(EEFscMax)); Serial.println( F("-> FT.Max")  );} // Maximum Detector in FT
-        /*
-		// -> old version
-		if( command == 16... ){ Food(); EEPROM.update(EEFscRain, food); Serial.print(EEPROM.read(EEFscRain)); Serial.println( F("-> FTRain") );} // Rain Detector
-		*/
+        if( command == 11  ){
+          if (ldr_status >= (DENOISEA-1)){
+            EEPROM.update(EELdrMin, Ldr()); Serial.print(EEPROM.read(EELdrMin)); Serial.println( F("-> LDR.Min")  );
+            ldr_reset();
+          } else { Ldr(); return; }
+        } // Minimum Light
+        if( command == 12  ){
+          if (ldr_status >= (DENOISEA-1)){
+            EEPROM.update(EELdrMax, Ldr()); Serial.print(EEPROM.read(EELdrMax)); Serial.println( F("-> LDR.Max")  );
+            ldr_reset();
+          } else { Ldr(); return; }
+        } // Maximum Light
+        if( command == 13  ){
+          if (smt_status >= (DENOISEA-1)){
+            EEPROM.update(EESmtMin, Moist()); Serial.print(EEPROM.read(EESmtMin)); Serial.println( F("-> SM.Min")  );
+            smt_reset();
+          } else { Moist(); return; }
+        } // Minimum Soil Moisture
+        if( command == 14  ){
+          if (smt_status >= (DENOISEA-1)){
+            EEPROM.update(EESmtMax, Moist()); Serial.print(EEPROM.read(EESmtMax)); Serial.println( F("-> SM.Max")  );
+            smt_reset();
+          } else { Moist(); return; }
+        } // Maximum Soil Moisture
+        if( command == 15 ){
+          Food();
+          if (fdt_status >= (DENOISEA-1)) {
+            EEPROM.update(EEFscMin,  food); Serial.print(EEPROM.read(EEFscMin)); Serial.println( F("-> FT.Min")  );
+            fdt_reset();
+          } else { Food(); return; }
+        } // Minimum Detector in Food Tank
+        if( command == 16 ){
+          Food();
+          if (fdt_status >= (DENOISEA-1)) {
+            EEPROM.update(EEFscMax,  food); Serial.print(EEPROM.read(EEFscMax)); Serial.println( F("-> FT.Max")  );
+            fdt_reset();
+          } else { Food(); return; }
+        } // Maximum Detector in FT
         // Diagnostics
         if( command == 17 ){ diagTimekeeper(); digitalWrite(IRIG, HIGH); Serial.println( F("Irrigation: ON") ); } // Irrigation
         if( command == 18 ){ diagTimekeeper(); digitalWrite(GROW, HIGH); Serial.println( F("Grow Light: ON") ); } // Grow Light
         if( command == 19 ){ diagTimekeeper(); digitalWrite(FANC, HIGH); Serial.println( F("Fan/Cooler: ON") ); } // Fan/Cooler
         if( command == 20 ){ diagTimekeeper(); digitalWrite(HEAT, HIGH); Serial.println( F("Heater: ON") ); } // Heater
-        if( command == 21 ){ diagTimekeeper(); digitalWrite(FOGG, HIGH); Serial.println( F("Fogger: ON") ); } // Fogger
+        if( command == 21 ){ diagTimekeeper(); digitalWrite(FOGG, HIGH); Serial.println( F("Humidifier: ON") ); } // Humidifier
         if( command == 22 ){ // Stop
 			stopDiagAll();
         }
@@ -591,7 +666,7 @@ void serialCLI(){
 			}
         }
         // cleansing...
-		Serial.flush();
+		//Serial.flush();
         inputString = "";
         stringComplete = false;
     }
