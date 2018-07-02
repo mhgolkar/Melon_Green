@@ -1,5 +1,5 @@
 /*
- * Melon Green v1.0.0
+ * Melon Green v1.1.0
  * Morteza H. Golkar
  * 2017
  * -----------------------------
@@ -18,7 +18,7 @@
     #define EEFscMax  6
     //#define EEFscRain .. //-> old version
 // Settings
-    // Time, Date & Regional 
+    // Time, Date & Regional
         #define EEDayLightTresh     7
         #define EENightLightTresh   8
         /*
@@ -44,39 +44,40 @@
         #define EEIrigLimRin  21
         #define EEIrigLimSmt  22
         #define EEIrigLimTim  23
+        #define EEIrigMaxpDay 24
     // Grow Light Supplier
-        #define EEGrowTrigInt           24
-        #define EEGrowIntUnit           25
-        #define EEGrowEachDuration      26
-        #define EEGrowTrigMin           27
-        #define EEGrowTrigMax           28
-        #define EEGrowLightSupplyBefore 29
+        #define EEGrowTrigInt           25
+        #define EEGrowIntUnit           26
+        #define EEGrowEachDuration      27
+        #define EEGrowTrigMin           28
+        #define EEGrowTrigMax           29
+        #define EEGrowLightSupplyBefore 30
     // Temperature & Humidity Control
-        #define EETempHumCTemp      30
-        #define EETempHumCTTol      31
-        #define EETempHumCHum       32
-        #define EETempHumCHTol      33
-        #define EEFANCforDeHumid    34
+        #define EETempHumCTemp      31
+        #define EETempHumCTempNight 32
+        #define EETempHumCTTol      33
+        #define EETempHumCHum       34
+        #define EETempHumCHumNight  35
+        #define EETempHumCHTol      36
+        #define EEFANCforDeHumid    37
     // Feeding Solution Mixer
-        #define EEFeedFrtlzRate 35
-        #define EEFeedFrtlzFlow 36
-        #define EEFeedContainer 37
+        #define EEFeedFrtlzRate 38
+        #define EEFeedFrtlzFlow 39
+        #define EEFeedContainer 40
 // Action Memory
     // Last Irrigation
-        #define EENextIrigYear      38
-        #define EENextIrigMonth     39
-        #define EENextIrigDay       40
-        #define EENextIrigHour      41
-        #define EENextIrigMinute    42
+        #define EENextIrigYear      41
+        #define EENextIrigMonth     42
+        #define EENextIrigDay       43
+        #define EENextIrigHour      44
+        #define EENextIrigMinute    45
     // Last Grow Light
-        #define EENextGrowYear      43
-        #define EENextGrowMonth     44
-        #define EENextGrowDay       45
-        #define EENextGrowHour      46
-        #define EENextGrowMinute    47
+        #define EENextGrowYear      46
+        #define EENextGrowMonth     47
+        #define EENextGrowDay       48
+        #define EENextGrowHour      49
+        #define EENextGrowMinute    50
     // Duty Cycle
-        #define EEDutyCycle         48
-        #define EEDutyCycleUnit     49
-        #define EEDutyCycleWarmUp   50
-
-
+        #define EEDutyCycle         51
+        #define EEDutyCycleUnit     52
+        #define EEDutyCycleWarmUp   53
