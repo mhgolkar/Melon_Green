@@ -27,7 +27,7 @@ For more information, please take a look at links below:
 |||+ Night-time Humidity & Temperature Controller (Independent)|   
 ||v1.2.0|Fully Revised OS (Major Bug Fixes) + RTC is Now Required.|
 
-Compiling Report (Approx.):  
+Compilation Report (Approx.):  
 > *ATmega328p \[~ Arduino Uno]*  
 > Sketch uses 30134 bytes (93%) of program storage space. Maximum is 32256 bytes.  
 > Global variables use 1101 bytes (53%) of dynamic memory, leaving 947 bytes for local variables. Maximum is 2048 bytes.
