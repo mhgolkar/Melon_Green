@@ -1,5 +1,5 @@
 /*
- * Melon Green v1.0.0
+ * Melon Green v1.2.0
  * Morteza H. Golkar
  * 2017
  * -----------------------------
@@ -12,7 +12,7 @@ void initializePresets(){
         #ifdef _Serial
             Serial.println( F("-------------------") );
             Serial.print( F("Installing (EEPROM) Presets ") );
-        #endif        
+        #endif
         EEPROM.write(EEPROMCHK, byte(123));
         // Colibration
         EEPROM.write(EELdrMin,  calibLDRMin);
@@ -46,6 +46,7 @@ void initializePresets(){
         EEPROM.write(EEIrigLimRin,  DontIrrigateOnRainyDays);
         EEPROM.write(EEIrigLimSmt,  IrrigateToMaximumSoilMoisture);
         EEPROM.write(EEIrigLimTim,  IrrigationDurationEachTime);
+        EEPROM.write(EEIrigMaxpDay, MaximumIrrigationPerDay);
         // Settings - Grow Light Supplier
         EEPROM.write(EEGrowTrigInt, GrowLightIntervalsEvery);
         EEPROM.write(EEGrowIntUnit, GrowLightIntervalUnit);
@@ -55,8 +56,10 @@ void initializePresets(){
         EEPROM.write(EEGrowLightSupplyBefore, DontSupplyGrowLightAfter);
         // Settings - Temperature & Humidity
         EEPROM.write(EETempHumCTemp, KeepTemperatureAbout);
+        EEPROM.write(EETempHumCTempNight, KeepTemperatureNight);
         EEPROM.write(EETempHumCTTol, TemperatureTolerance);
         EEPROM.write(EETempHumCHum, keepHumidityAbout);
+        EEPROM.write(EETempHumCHumNight, keepHumidityNight);
         EEPROM.write(EETempHumCHTol, HumidityTolerance);
         EEPROM.write(EEFANCforDeHumid, UseFanCoolerToReduceHumidity);
         // Settings - Feeding Solution Mixer
@@ -93,22 +96,30 @@ void initializeModules(){
 			#endif
             INTERNAL_CLOCK = true;
             //return;
-        } else if (rtc.lostPower()) {
+        }  else if (! rtc.isrunning()) { // DS1307
+			#ifdef _Serial
+            Serial.println( F("RTC Error! Please Check Date & Time Settings.") );
+			#endif
+			//rtc.adjust(DateTime(__DATE__, __TIME__)); // RTC_DS3231
+        }
+        /* else if (rtc.lostPower()) { // RTC_DS3231
 			#ifdef _Serial
             Serial.println( F("RTC lost! Please Check Date & Time Settings.") );
 			#endif
 			rtc.adjust(DateTime(__DATE__, __TIME__));
-        }
+        } */
     #else
         INTERNAL_CLOCK = true;
         #ifdef _Serial
-            Serial.println( F("System Reset! Please Check Your Settings.") );
+            Serial.println( F("System Reset or RTC Error! Please Check Sys & Your Settings.") );
         #endif
     #endif
+    /*
     if( INTERNAL_CLOCK == true ){
         // last saved time stamp --> Now
 		setTime((int)EEPROM.read(EEHour), (int)EEPROM.read(EEMinute), (int)EEPROM.read(EESecond), (int)EEPROM.read(EEDay), (int)EEPROM.read(EEMonth), (int)EEPROM.read(EEYear));
     }
+    */
     #ifdef _Serial
         Serial.println("-------------------");
     #endif
@@ -134,10 +145,12 @@ time_t updateNow(){  // Updates: int Now[6]...
             Now[5] = second();
     #ifdef _RTC
         }
+    /*
+    // removed in 1.2.0 r2
 	#else
 		#ifdef _Serial
         if(command != 30) { // Don't Update EEPROM with Wrong Data accidentally while [Serial] Manual Adjustment
-		#endif
+		#endif            
             EEPROM.update(EEYear, Now[0]);
             EEPROM.update(EEMonth, Now[1]);
             EEPROM.update(EEDay, Now[2]);
@@ -147,6 +160,7 @@ time_t updateNow(){  // Updates: int Now[6]...
 		#ifdef _Serial
         }
 		#endif
+    */
     #endif
     // Return Unixtimestamp
     #ifdef _RTC
@@ -158,6 +172,20 @@ time_t updateNow(){  // Updates: int Now[6]...
     #ifdef _RTC
         }
     #endif
+}
+void delayF(unsigned long del) { // automatic adjusting internalclock after delays
+  delay(del);
+  forgotten += del;
+  if (INTERNAL_CLOCK == true){
+    if(forgotten > ADJUSTINT){
+      // adjust time after x sec of delays
+      updateNow();
+      if (Now[4] > ADJUSTINT/60000){
+        setTime(Now[3], ( Now[4] - (ADJUSTINT/60000) ), Now[5], Now[2], Now[1], Now[0]);
+        forgotten = forgotten - ADJUSTINT;
+      }
+    }
+  }
 }
 #ifdef _Serial
 void printNextIrrigation(){
@@ -181,7 +209,12 @@ void printDateTime(){
     Serial.print(Now[2]); Serial.print(" [");
     Serial.print(Now[3]); Serial.print(":");
     Serial.print(Now[4]); /* Serial.print(":");
-    Serial.print(Now[5]); */ Serial.println("]");
+    Serial.print(Now[5]); */
+    if(INTERNAL_CLOCK == false){
+      Serial.println("] RTC");
+    } else {
+      Serial.println("] INTC");
+    }
 }
 #endif
 void stopDiagAll(){
@@ -197,61 +230,84 @@ void stopDiagAll(){
 }
 void diagTimekeeper(){
     if (diag == false) {
-        diagTime = millis(); delay(1);
+        diagTime = millis() - 1;
         diag = true;
     } else {
         if ( ( millis() - diagTime ) >= DiagMaxMilliSecond) {
-            stopDiagAll();  // Finish			
+            stopDiagAll();  // Finish
         }
     }
 }
-// Read Get Set -------------------------------
-int Ldr(){
-    int input = analogRead(LDR); delay(ANALOGDELAY);
-    int result = map(input, 0, 1023, 0, 255);
-    lux = map(result, EEPROM.read(EELdrMin), EEPROM.read(EELdrMax), 0, 100);  
-    return result;
-}
-int Moist(){
-    int input = analogRead(SOILMOISTURE); delay(ANALOGDELAY);
-    int result = map(input, 0, 1023, 0, 255);
-    moist = map(result, EEPROM.read(EESmtMin), EEPROM.read(EESmtMax), 0, 100);	 
-    return result;
-}
-int Food() {
-    int input = analogRead(FOODTANK); delay(ANALOGDELAY);
-    food = map(input, 0, 1023, 0, 255);
-    if( (food < EEPROM.read(EEFscMin)) && ((EEPROM.read(EEFscMin) - food) > calibTolerance) ){
-        return 1; // Less Than Minimum
-    } else if( (food >= (EEPROM.read(EEFscMin) - calibTolerance) ) && (food < (EEPROM.read(EEFscMax) - calibTolerance) ) ) {
-        return 2; // Normal
-    } else if ( (food > (EEPROM.read(EEFscMax) - calibTolerance)) /*&& (food < (EEPROM.read(EEFscRain) - calibTolerance) ) */ ){
-        return 3; // Max
+// Analog Sensors -------------------------------
+  // LDR (Light Intensity)
+void ldr_reset(){ ldr_status = 0; ldr_first_attempt = 0; ldr_bank = 0; }
+int Ldr(int noise_reduction = 0){
+    int input = 0;
+    int get = analogRead(LDR); delayF(ANALOGDELAY);
+    if(noise_reduction != 99){
+      if(ldr_status == 0) ldr_first_attempt = millis() - 1;
+      if( millis() >= (ldr_first_attempt + ((DENOISES * 1000 / DENOISEA) * ldr_status) ) ){
+        ldr_bank += get;
+        ldr_status++;
+      }
+      input = ldr_bank / ldr_status;
+      if(ldr_status > DENOISEA) ldr_reset();
+    } else {
+      input = get;
     }
-    /* // -> old version
-	 else if ( (food > (EEPROM.read(EEFscRain) - calibTolerance))  ){
-		 return 4; // Rain
-	 }
-	 */
-    else {
+    int result = map(input, 0, 1023, 0, 255);
+    lux = map(result, EEPROM.read(EELdrMin), EEPROM.read(EELdrMax), 0, 100);
+    return result;
+}
+  // Soil Moisture
+void smt_reset(){ smt_status = 0; smt_first_attempt = 0; smt_bank = 0; }
+int Moist(int noise_reduction = 0){
+    int input = 0;
+    int get = analogRead(SOILMOISTURE); delayF(ANALOGDELAY);
+    if(noise_reduction != 99){
+      if(smt_status == 0) smt_first_attempt = millis() - 1;
+      if( millis() >= (smt_first_attempt + ((DENOISES * 1000 / DENOISEA) * smt_status) ) ){
+        smt_bank += get;
+        smt_status++;
+      }
+      input = smt_bank / smt_status;
+      if(smt_status > DENOISEA) smt_reset();
+    } else {
+      input = get;
+    }
+    int result = map(input, 0, 1023, 0, 255);
+    moist = map(result, EEPROM.read(EESmtMin), EEPROM.read(EESmtMax), 0, 100);
+    return result;
+}
+  // Food Tank Level
+void fdt_reset(){ fdt_status = 0; fdt_first_attempt = 0; fdt_bank = 0; }
+int Food(int noise_reduction = 0) {
+    int input = 0;
+    int get = analogRead(FOODTANK); delayF(ANALOGDELAY);
+    if(noise_reduction != 99){
+      if(fdt_status == 0) fdt_first_attempt = millis() - 1;
+      if( millis() >= (fdt_first_attempt + ((DENOISES * 1000 / DENOISEA) * fdt_status) ) ){
+        fdt_bank += get;
+        fdt_status++;
+      }
+      input = fdt_bank / fdt_status;
+      if(fdt_status > DENOISEA) fdt_reset();
+    } else {
+      input = get;
+    }
+    food = map(input, 0, 1023, 0, 255);
+    if( food <= (int)EEPROM.read(EEFscMin) ){
+        return 1; // Less Than Minimum
+    } else if( food > (int)EEPROM.read(EEFscMin) && food < (int)EEPROM.read(EEFscMax) ) {
+        return 2; // Normal
+    } else if ( food >= (int)EEPROM.read(EEFscMax) ){
+        return 3; // Max
+    } else {
         return 0; // Ambiguous
     }
 }
-#ifdef _DHT
-void DHTRead(int which){
-    delay(DHTDELAY); // Wait a few moments between measurements.
-    if(which == 1 || which == 0) { temp =  dht.readTemperature(); delay(DHTDELAY); }
-    if(which == 2 || which == 0) { humid = dht.readHumidity(); delay(DHTDELAY); }
-    if ( isnan(humid) && isnan(temp) ) {
-        #ifdef _Serial
-            Serial.println( F("Failed to read from DHT sensor!") );
-        #endif
-        return;
-    }
-}
-#endif
 int dayTime(){
-    Ldr();
+    Ldr(99);
     if ( lux < (int)EEPROM.read(EENightLightTresh) ) {
         return 1; // Night
     } else if ( (lux >= (int)EEPROM.read(EENightLightTresh)) && (lux <= (int)EEPROM.read(EEDayLightTresh)) ) {
@@ -260,8 +316,22 @@ int dayTime(){
         return 3; // Day
     }
 }
+// Digital Sensors
+  // Digital Humidity & Temperature
+#ifdef _DHT
+void DHTRead(int which){
+    delayF(DHTDELAY); // Wait a few moments between measurements.
+    if(which == 1 || which == 0) { temp =  dht.readTemperature(); delayF(DHTDELAY); }
+    if(which == 2 || which == 0) { humid = dht.readHumidity(); delayF(DHTDELAY); }
+    if ( isnan(humid) && isnan(temp) ) {
+        #ifdef _Serial
+            Serial.println( F("Failed to read from DHT sensor!") );
+        #endif
+        return;
+    }
+}
+#endif
 bool itsRainy(){
-    // if( Food() == 4 ) { return true; } else { return false; } --> old Version	 
     bool rainy = false;
     if( digitalRead(RAIN) == HIGH ){ rainy = true; } else { rainy = false;}
     return rainy;
@@ -302,9 +372,9 @@ void setNextEvent(int irriGrow){
         unit = (int)EEPROM.read(EEGrowIntUnit);
     }
     if( unit == 0 ) {
-        newMinute += interval; 
+        newMinute += interval;
     } else if( unit == 1 ) {
-        newHour += interval; 
+        newHour += interval;
     } else if( unit == 2 ) {
         newDay += interval;
     } else if( unit == 3 ) {
@@ -319,7 +389,7 @@ void setNextEvent(int irriGrow){
     while( newHour > 23 ){
         newHour -= 24;
         newDay += 1;
-    }	
+    }
     while(newDay > 28) {
         if( ((newYear % 4) == 0) && (!(((newYear % 400) != 0) && ((newYear % 100) == 0))) ){
             /* leap year */
@@ -328,7 +398,7 @@ void setNextEvent(int irriGrow){
                 newMonth += 1;
             }
         } else {
-            /* common year */			
+            /* common year */
             if( newMonth == 2){ /* February */
                 newDay -= 28;
                 newMonth += 1;
@@ -337,18 +407,18 @@ void setNextEvent(int irriGrow){
                     /* 31 days */
                     if (newDay > 31){
                         newDay -= 31;
-                        newMonth += 1;	
+                        newMonth += 1;
                     } else { break; }
                 } else {
                     /* 30 days */
                     if (newDay > 30){
                         newDay -= 30;
-                        newMonth += 1;	
+                        newMonth += 1;
                     } else { break; }
-                }			
+                }
             }
         }
-    }	
+    }
     while( newMonth > 12 ){
         newHour -= 12;
         newYear += 1;
@@ -393,10 +463,10 @@ void careLostEvents(int irriGrow) {
             Serial.println( F("-------------------") );
             Serial.print( F("Some Scheduled Tasks Lost! -> Next ") );
             if (irriGrow == true) {
-                Serial.print( F("IRRIGATION: ") ); 
+                Serial.print( F("IRRIGATION: ") );
                 printNextIrrigation();
             } else {
-                Serial.print( F("GROW LIGHT: ") ); 
+                Serial.print( F("GROW LIGHT: ") );
                 printNextGrowLight();
             }
         }
@@ -405,25 +475,54 @@ void careLostEvents(int irriGrow) {
 // Irrigation ---------------------------------
 bool scheduledIrrigationNow(){
 	if ( (int)EEPROM.read(EEIrigTrigInt) == 0 ) { return false; }
-    careLostEvents(1); //--> It Does 'updateNow();'
-    if ((int)EEPROM.read(EENextIrigYear) == Now[0] && (int)EEPROM.read(EENextIrigMonth) == Now[1] && (int)EEPROM.read(EENextIrigDay) == Now[2] && (int)EEPROM.read(EENextIrigHour) == Now[3] && (int)EEPROM.read(EENextIrigMinute) == Now[4] ) { return true; } else { return false; }
+    if ((int)EEPROM.read(EENextIrigYear) == Now[0] && (int)EEPROM.read(EENextIrigMonth) == Now[1] && (int)EEPROM.read(EENextIrigDay) == Now[2] && (int)EEPROM.read(EENextIrigHour) == Now[3] && (int)EEPROM.read(EENextIrigMinute) == Now[4] ) {
+      return true;
+    } else {
+      careLostEvents(1); //--> It Does 'updateNow();'
+      return false;
+    }
 }
 bool limitIrrigation(){
     bool shallwe = false;
-    if ( ( IrrigationTime != 0 ) && ( (( millis() - IrrigationTime ) / 60000) >= (int)EEPROM.read(EEIrigLimTim) ) ) {
-        shallwe = true;	
-    } else if( ((int)EEPROM.read(EEIrigLimDay) != 0) && (dayTime() < 2) ) {
+    if ( (IrrigationTime != 0) && (millis() - IrrigationTime) > ((int)EEPROM.read(EEIrigLimTim) * 60000) ) {
         shallwe = true;
-    } else if( ((int)EEPROM.read(EEIrigLimRin) != 0) && (itsRainy() == true) ) {
-        shallwe = true;			
-    } else {
+    }
+    if( !shallwe && ((int)EEPROM.read(EEIrigLimDay) != 0) && (dayTime() < 2) ) {
+        shallwe = true;
+    }
+    if( !shallwe && ((int)EEPROM.read(EEIrigLimRin) != 0) && (itsRainy() == true) ) {
+        shallwe = true;
+    }
+    if( !shallwe ){
         Moist();
-        if ( moist >= (int)EEPROM.read(EEIrigLimSmt) && ((int)EEPROM.read(EEIrigLimSmt) > 0) ) {
-            shallwe = true;
-        }				
-    }	
+        if (smt_status >= (DENOISEA-1)){
+          if ( moist >= (int)EEPROM.read(EEIrigLimSmt) && ((int)EEPROM.read(EEIrigLimSmt) > 0) ) { shallwe = true; }
+          smt_reset();
+        }
+    }
+    if( !shallwe && (Total_Irrig_per_Day >= (int)EEPROM.read(EEIrigMaxpDay)) ){
+      shallwe = true;
+    }
+    #ifdef _DHT
+    // Temperature
+    if( !shallwe && (int)EEPROM.read(EEIrigTrigTmp) > 0 ) {
+        DHTRead(1);
+        if ( temp  <= (int)EEPROM.read(EEIrigTrigTmp) ) { shallwe = true; }
+    }
+    // Humidity
+    if( !shallwe && (int)EEPROM.read(EEIrigTrigHum) < 100 ) {
+        DHTRead(2);
+        if ( humid >= (int)EEPROM.read(EEIrigTrigHum) ) { shallwe = true; }
+    }
+    #endif
+    updateNow();
+    if( Today != Now[2] ){
+      Total_Irrig_per_Day = 0;
+      Today = Now[2];
+    }
     if ( shallwe == true && is_irrigating == true) {
         is_irrigating = false;
+        Total_Irrig_per_Day += (int)( (millis() - IrrigationTime) / 60000 );
         IrrigationTime = 0;
         digitalWrite(IRIG, LOW);
         #ifdef _Serial
@@ -434,22 +533,33 @@ bool limitIrrigation(){
 }
 void checkIrrigationJob(){
     bool shallwe = false;
-    #ifdef _DHT
-    if( ((int)EEPROM.read(EEIrigTrigHum) < 100) || ((int)EEPROM.read(EEIrigTrigTmp) > 0) ) {
-        DHTRead(0);
-        if ( (temp  > (int)EEPROM.read(EEIrigTrigTmp)) || (humid < (int)EEPROM.read(EEIrigTrigHum)) ) { shallwe = true; }
+    if ( limitIrrigation() == false ){
+      if( (int)EEPROM.read(EEIrigTrigSmt) < 100 ) {
+          Moist();
+          if (smt_status >= (DENOISEA-1)){
+            if( moist < (int)EEPROM.read(EEIrigTrigSmt) ) { shallwe = true; }
+            smt_reset();
+          }
+      }
+      if( scheduledIrrigationNow() == true ) {
+          shallwe = true;
+          if(awake == true) setNextEvent(1);
+      }
+      #ifdef _DHT
+      // Temperature
+      if( !shallwe && smt_status == 0 ){
+        if( (int)EEPROM.read(EEIrigTrigTmp) > 0 ) {
+            DHTRead(1);
+            if ( temp  > (int)EEPROM.read(EEIrigTrigTmp) ) { shallwe = true; }
+        } else if( (int)EEPROM.read(EEIrigTrigHum) < 100 ) {
+            DHTRead(2);
+            if ( humid < (int)EEPROM.read(EEIrigTrigHum) ) { shallwe = true; }
+        }
+      }
+      #endif
     }
-    #endif
-    if( (int)EEPROM.read(EEIrigTrigSmt) < 100 ) {
-        Moist();
-        if( moist < (int)EEPROM.read(EEIrigTrigSmt) ) { shallwe = true; }
-    }
-    if( scheduledIrrigationNow() == true ) {
-        shallwe = true;
-        setNextEvent(1); 
-    }
-    if( (shallwe == true) && (limitIrrigation() == false) ) {
-        IrrigationTime = millis(); delay(1);
+    if( shallwe == true ) {
+        IrrigationTime = millis() - 1;
         is_irrigating = true;
         digitalWrite(IRIG, HIGH);
         #ifdef _Serial
@@ -459,18 +569,28 @@ void checkIrrigationJob(){
 }
 // Grow Light Supplier ---------------------------------
 bool scheduledGrowLightNow(){
+  updateNow();
 	if ( (int)EEPROM.read(EEGrowTrigInt) == 0 ) { return false; }
-    careLostEvents(2); //--> It Does 'updateNow();'
-    if ((int)EEPROM.read(EENextGrowYear) == Now[0] && (int)EEPROM.read(EENextGrowMonth) == Now[1] && (int)EEPROM.read(EENextGrowDay) == Now[2] && (int)EEPROM.read(EENextGrowHour) == Now[3] && (int)EEPROM.read(EENextGrowMinute) == Now[4] ) { return true; } else { return false; }
+    if ((int)EEPROM.read(EENextGrowYear) == Now[0] && (int)EEPROM.read(EENextGrowMonth) == Now[1] && (int)EEPROM.read(EENextGrowDay) == Now[2] && (int)EEPROM.read(EENextGrowHour) == Now[3] && (int)EEPROM.read(EENextGrowMinute) == Now[4] ) {
+      return true;
+    } else {
+      careLostEvents(2); //--> It Does 'updateNow();'
+      return false;
+    }
 }
 bool limitGrowLight(){
     bool shallwe = false;
     if( ((int)EEPROM.read(EEGrowLightSupplyBefore) <= 23) && ( (Now[3] >= (int)EEPROM.read(EEGrowLightSupplyBefore)) || (dayTime() < 2) ) ){
-        shallwe = true;	
-    } else if( (int)EEPROM.read(EEGrowTrigMax) > 0 ){
-		Ldr();
-        if( lux > (int)EEPROM.read(EEGrowTrigMax) ) { shallwe = true; }
-    } else if ( (( millis() - growLightTime ) / 60000) >= (int)EEPROM.read(EEGrowEachDuration) ) {
+        shallwe = true;
+    }
+    if( (int)EEPROM.read(EEGrowTrigMax) > 0 ){
+		    Ldr();
+        if( ldr_status >= DENOISEA ) {
+          if( lux > (int)EEPROM.read(EEGrowTrigMax) ) { shallwe = true; }
+          ldr_reset();
+        }
+    }
+    if ( growLightTime > 0 && ( millis() - growLightTime ) > ((int)EEPROM.read(EEGrowEachDuration) * 60000) ) {
         shallwe = true;
     }
     if ( shallwe == true && is_supplyingGrowLight == true) {
@@ -484,19 +604,24 @@ bool limitGrowLight(){
     return shallwe;
 }
 void checkGrowLightJob(){
-    updateNow();
     bool shallwe = false;
-    if( ((int)EEPROM.read(EEGrowLightSupplyBefore) > 23) || ( (Now[3] < (int)EEPROM.read(EEGrowLightSupplyBefore)) && (dayTime() > 1) ) ){
-        if( scheduledGrowLightNow() == true ) {
-            shallwe = true;
-            setNextEvent(2); 
-        } else if ( (int)EEPROM.read(EEGrowTrigMin) < 99 ) {
-            Ldr();
-            if( lux < (int)EEPROM.read(EEGrowTrigMin) ){ shallwe = true; }
-        }
+    if( limitGrowLight() == false ){
+      updateNow();
+      if( ((int)EEPROM.read(EEGrowLightSupplyBefore) > 23) || ( (Now[3] < (int)EEPROM.read(EEGrowLightSupplyBefore)) && (dayTime() > 1) ) ){
+          if( scheduledGrowLightNow() == true ) {
+              shallwe = true;
+              growLightTime = millis() - 1;
+              if(awake == true) setNextEvent(2);
+          } else if ( (int)EEPROM.read(EEGrowTrigMin) < 99 ) {
+              Ldr();
+              if( ldr_status >= DENOISEA ){
+                if( lux < (int)EEPROM.read(EEGrowTrigMin) ) { shallwe = true; }
+                ldr_reset();
+              }
+          }
+      }
     }
-    if( (shallwe == true) && (limitGrowLight() == false) ) {
-        growLightTime = millis(); delay(1);
+    if( shallwe == true ) {
         is_supplyingGrowLight = true;
         digitalWrite(GROW, HIGH);
         #ifdef _Serial
@@ -508,24 +633,30 @@ void checkGrowLightJob(){
 #ifdef _DHT
 void temperatureKeeper(bool awk){
     if(awk == true){
-        if( (int)EEPROM.read(EETempHumCTemp) > 0 ){
+        if( ( (int)EEPROM.read(EETempHumCTemp) > 0 && dayTime() >= 2 ) ||  ( (int)EEPROM.read(EETempHumCTempNight) > 0 && dayTime() < 2 ) ){
+          int target_temp = 0;
+          if ( dayTime() < 2 ){
+            target_temp = (int)EEPROM.read(EETempHumCTempNight);
+          } else {
+            target_temp = (int)EEPROM.read(EETempHumCTemp);
+          }
             DHTRead(1);
-            if( is_cooling == false && temp > ( (int)EEPROM.read(EETempHumCTemp) + ((int)EEPROM.read(EETempHumCTTol)/2) ) ){ // Cool
+            if( is_cooling == false && temp > ( target_temp + ((int)EEPROM.read(EETempHumCTTol)/2) ) ){ // Cool
                 digitalWrite(HEAT, LOW);
                 digitalWrite(FANC, HIGH);
                 is_heating = false; is_cooling = true;
                 #ifdef _Serial
                     Serial.println( F("COOLING...") );
                 #endif
-            } else if( is_heating == false && temp < ( (int)EEPROM.read(EETempHumCTemp) - ((int)EEPROM.read(EETempHumCTTol)/2) ) ){ // Heat
+            } else if( is_heating == false && temp < ( target_temp - ((int)EEPROM.read(EETempHumCTTol)/2) ) ){ // Heat
                 digitalWrite(HEAT, HIGH);
                 digitalWrite(FANC, LOW);
-                is_heating = true; is_cooling = false;			 
+                is_heating = true; is_cooling = false;
                 #ifdef _Serial
                     Serial.println( F("HEATING...") );
                 #endif
             } else if( is_heating == true || is_cooling == true ) {
-                if( is_cooling == true && temp <= ( (int)EEPROM.read(EETempHumCTemp) + ((int)EEPROM.read(EETempHumCTTol)/2) ) ){
+                if( is_cooling == true && temp <= ( target_temp + ((int)EEPROM.read(EETempHumCTTol)/2) ) ){
                     is_cooling = false;
                     if( is_Fanning == false ){
                         digitalWrite(FANC, LOW);
@@ -534,22 +665,44 @@ void temperatureKeeper(bool awk){
                         #endif
                     }
                 }
-                if( is_heating == true && temp >= ( (int)EEPROM.read(EETempHumCTemp) - ((int)EEPROM.read(EETempHumCTTol)/2) ) ){
-                    is_heating = false; 
+                if( is_heating == true && temp >= ( target_temp - ((int)EEPROM.read(EETempHumCTTol)/2) ) ){
+                    is_heating = false;
                     digitalWrite(HEAT, LOW);
                     #ifdef _Serial
                         Serial.println( F("HEATER: OFF") );
                     #endif
                 }
             }
+        } else {
+              // Temperature Controller not set but Devices are already ON, so we need to turn them OFF
+            if( is_heating == true ){
+              is_heating = false;
+              digitalWrite(HEAT, LOW);
+              #ifdef _Serial
+                  Serial.println( F("HEATER: OFF") );
+              #endif
+            }
+            if ( is_cooling == true ) {
+              is_cooling = false;
+              if( is_Fanning == false ) digitalWrite(FANC, LOW);
+              #ifdef _Serial
+                  Serial.println( F("COOLER: OFF") );
+              #endif
+            }
         }
     }
 }
 void humidityKeeper(bool awk){
     if(awk == true){
-        if( (int)EEPROM.read(EETempHumCHum) > 0 ){
+        if( ( (int)EEPROM.read(EETempHumCHum) > 0 && dayTime() >= 2 ) ||  ( (int)EEPROM.read(EETempHumCHumNight) > 0 && dayTime() < 2 ) ){
+            int target_humid = 0;
+            if ( dayTime() < 2 ){
+              target_humid = (int)EEPROM.read(EETempHumCHumNight);
+            } else {
+              target_humid = (int)EEPROM.read(EETempHumCHum);
+            }
             DHTRead(2);
-            if( is_Fanning == false && humid > ( (int)EEPROM.read(EETempHumCHum) + ((int)EEPROM.read(EETempHumCHTol)/2) ) ){ // Fan
+            if( is_Fanning == false && humid > ( target_humid + ((int)EEPROM.read(EETempHumCHTol)/2) ) ){ // Fan
                 digitalWrite(FOGG, LOW); is_Fogging = false;
                 if( is_heating == false && (int)EEPROM.read(EEFANCforDeHumid) == 1 ){
                     digitalWrite(FANC, HIGH);
@@ -558,29 +711,45 @@ void humidityKeeper(bool awk){
                         Serial.println( F("FAN (Humidity Reduction)...") );
                     #endif
                 }
-            } else if( is_Fogging == false && humid < ( (int)EEPROM.read(EETempHumCHum) - ((int)EEPROM.read(EETempHumCHTol)/2) ) ){ // Fogger
+            } else if( is_Fogging == false && humid < ( target_humid - ((int)EEPROM.read(EETempHumCHTol)/2) ) ){ // Fogger
                 digitalWrite(FOGG, HIGH); is_Fogging = true; is_Fanning = false;
-                if(is_cooling == false){ digitalWrite(FANC, LOW); }									 
+                if(is_cooling == false){ digitalWrite(FANC, LOW); }
                 #ifdef _Serial
                     Serial.println( F("FOGGER: ON") );
                 #endif
             } else if (is_Fogging == true || is_Fanning == true) {
-                if( is_Fanning == true && humid <= ( (int)EEPROM.read(EETempHumCHum) + ((int)EEPROM.read(EETempHumCHTol)/2) ) ){
+                if( is_Fanning == true && humid <= ( target_humid + ((int)EEPROM.read(EETempHumCHTol)/2) ) ){
                     is_Fanning = false;
                     if(is_cooling == false){
-                        digitalWrite(FANC, LOW); 
+                        digitalWrite(FANC, LOW);
                         #ifdef _Serial
                             Serial.println( F("FAN: OFF") );
                         #endif
                     }
                 }
-                if( is_Fogging == true && humid >= ( (int)EEPROM.read(EETempHumCHum) - ((int)EEPROM.read(EETempHumCHTol)/2) ) ){
+                if( is_Fogging == true && humid >= ( target_humid - ((int)EEPROM.read(EETempHumCHTol)/2) ) ){
                     digitalWrite(FOGG, LOW);
                     is_Fogging = false;
                     #ifdef _Serial
                         Serial.println( F("FOGGER: OFF") );
                     #endif
                 }
+            }
+        } else {
+          // Humidity Controller not set but Devices are already ON, so we need to turn them OFF
+          if( is_Fanning == true ){
+              is_Fanning = false;
+              if ( is_cooling == false ) digitalWrite(FANC, LOW);
+              #ifdef _Serial
+                  Serial.println( F("FAN: OFF") );
+              #endif
+          }
+          if ( is_Fogging == true ){
+              digitalWrite(FOGG, LOW);
+              is_Fogging = false;
+              #ifdef _Serial
+                  Serial.println( F("FOGGER: OFF") );
+              #endif
             }
         }
     }
@@ -591,13 +760,14 @@ void humidityKeeper(bool awk){
 void solutionMixer(bool awk){
     if(awk == true){
         if( (int)EEPROM.read(EEFeedFrtlzRate) > 0 && (int)EEPROM.read(EEFeedFrtlzFlow) > 0 && (int)EEPROM.read(EEFeedContainer) > 0 ){
-            int tankStatus = Food(); // 2 -> Normal
+          int tankStatus = Food(); // 2 -> Normal
+          if( fdt_status >= DENOISEA ){ // Noise Reduction
             if( tankStatus < 2 && is_Mixing == false) {
-                fertilizerTime = millis(); delay(1);
+                fertilizerTime = millis() - 1;
                 // pause irrigation
                 if(IrrigationTime > 0){
                     is_irrigating = false;
-                    digitalWrite(IRIG, LOW);			
+                    digitalWrite(IRIG, LOW);
                     #ifdef _Serial
                         Serial.println( F("Irrigation Paused.") );
                     #endif
@@ -606,21 +776,24 @@ void solutionMixer(bool awk){
                 digitalWrite(FRTL, HIGH);
                 is_Mixing = true;
                 #ifdef _Serial
-                    Serial.println( F("+ Fertilizer...") );
+                    Serial.print( food );
+                    Serial.println( F(" + Fertilizer...") );
                 #endif
             } else if ( tankStatus < 2 && is_Mixing == true && fertilizer_added == false){
                 unsigned int fertilizerDosageTime = ( (int)EEPROM.read(EEFeedContainer) / 100 * (int)EEPROM.read(EEFeedFrtlzRate) ) / (int)EEPROM.read(EEFeedFrtlzFlow);
                 if( (fertilizerTime != 0) && (millis() - fertilizerTime) > (fertilizerDosageTime * 1000) ) {
                     digitalWrite(FRTL, LOW);
                     digitalWrite(WATR, HIGH);
-                    fertilizer_added = true;				
+                    fertilizer_added = true;
                     #ifdef _Serial
-                        Serial.println( F("+ Diluting Food Solution...") );
+                        Serial.print( food );
+                        Serial.println( F(" + Diluting Food Solution...") );
                     #endif
                 } // -> Dilute with water
-            } else if ( tankStatus > 2 && is_Mixing == true){			
+            } else if ( tankStatus > 2 && is_Mixing == true){
                 #ifdef _Serial
-                    Serial.println( F("Solution Tank [OK].") );
+                    Serial.print( food );
+                    Serial.println( F(" : Solution Tank [OK].") );
                 #endif
                 digitalWrite(WATR, LOW);
                 is_Mixing = false;
@@ -629,14 +802,16 @@ void solutionMixer(bool awk){
                 if(IrrigationTime > 0){
                     IrrigationTime = (millis() - (fertilizerTime - IrrigationTime));
                     is_irrigating = true;
-                    digitalWrite(IRIG, HIGH);							
+                    digitalWrite(IRIG, HIGH);
                     #ifdef _Serial
                         Serial.println( F("Continue Irrigation.") );
                     #endif
                 }
                 //
-                fertilizerTime = 0;			
+                fertilizerTime = 0;
             }
+            fdt_reset();
+          }
         }
     }
 }
@@ -669,17 +844,18 @@ void dutyCycle(){
             // Shall we warm up?
             if( warm == true ){
                 digitalWrite(SVCC, HIGH);
-                warmUpTime = millis(); delay(1);				 
+                warmUpTime = millis() - 1;
             }
         } else if (awake == false && warm == true){
             if( (warmUpTime != 0) && (millis() - warmUpTime) > ((int)EEPROM.read(EEDutyCycleWarmUp) * 1000) ) { awake = true; lastDuty = millis(); }
         } else if (awake == true && warm == true) { // it's warm & awake...
+          //if( scheduledGrowLightNow() == true ){ setNextEvent(2); }
             // time to sleep?
-            if( is_irrigating == false && is_supplyingGrowLight == false && is_heating == false && is_cooling == false && is_Fanning == false && is_Fogging == false && is_Mixing == false){
+            if(ldr_status == 0 && smt_status == 0 && is_irrigating == false && is_supplyingGrowLight == false && is_heating == false && is_cooling == false && is_Fanning == false && is_Fogging == false && is_Mixing == false){
                 warm = false; awake = false;
                 warmUpTime = 0;
                 digitalWrite(SVCC, LOW);
             }
         }
-    }	
+    }
 }
