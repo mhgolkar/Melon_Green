@@ -1,9 +1,10 @@
 /*
- * Melon Green v1.0.0
+ * Melon Green v1.1.0
  * Morteza H. Golkar
  * 2017
  * -----------------------------
  * Presets
+ * CAUTION! It's Configured for v1.x.x Boards Pinout
  * -----------------------------
 */
 
@@ -28,13 +29,16 @@
 // Delays & Timing
 #define DHTDELAY 1500 // Reading temperature or humidity takes about 250 milliseconds! Sensor readings may also be up to 2 seconds (very slow 'old' sensor)
 #define ANALOGDELAY 1 // It takes about 100 microseconds (0.0001 s) to read an analog input
+#define ADJUSTINT 60000 // (should be = x*60,000) automatic adjusting internalclock after x miliseconds of delays
+#define DENOISEA 3 // x attempts (integer)...
+#define DENOISES 1 // ... in y seconds (integer) for Noise Reduction
 
 // Calibration [Preset]
 #define calibLDRMin 0
 #define calibLDRMax 255
 #define calibSmtMin 0
 #define calibSmtMax 255
-#define calibTolerance 10
+// #define calibTolerance 10 // -> Old Version 1.0.0.
 #define calibFdTMin 100
 #define calibFdTMax 170
 //#define calibFdTRain 237 //-> old version
