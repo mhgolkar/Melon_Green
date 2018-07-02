@@ -1,22 +1,24 @@
 /*
- * Melon Green v1.0.0
+ * Melon Green v1.2.0
  * Morteza H. Golkar
- * [2017]
+ * [2018]
 */
 
 // Info
 // [Arduino 1.8.0+ ]
-#define Melon_Green_Info "Melon Green v1.0.0\r\n[M. H. Golkar 2017]"
+#define Welcome_Message "Welcome. It's..."
+#define Melon_Green_Info "Melon Green v1.2.0 \r\n[M. H. Golkar 2018]"
 
 // Modes [User Editable]
 #define _RTC // I2C Real Time Clock Module (e.g. DS323x) is Available for Accurate timing
 #define _DHT // DHT Module is Available
 #define _Mixer // Mix Feeding Solution Using Two Pumps and a Container
 #define _Serial // Serial Communication With Board (RECOMMENDED)
+#define _SynthCycle // Synthetic Day/Night Cycle
 
 // Presets & Settings
 #include "modules/Settings.h"
-#include "modules/Presets.h"
+#include "modules/Presets.v1.h"
 #include "modules/Memory_Addresses.h"
 // Required Libraries & Structures
 	// Volatile Memory
@@ -41,15 +43,19 @@
 	#endif
 
 // Variables
-int Now[6];	// Timepiece
+int Now[6];	unsigned long int forgotten = 0; // Timepiece
 unsigned int lux; unsigned int moist; unsigned int food; float temp; float humid;	// General Variables
 boolean awake = false; boolean warm = false; unsigned long warmUpTime; unsigned long lastDuty = 0;	// Duty Cycle
 boolean diag = false; unsigned long diagTime;	// Diagnostics
-boolean is_irrigating = false; unsigned long IrrigationTime;	// Irrigation
-boolean is_supplyingGrowLight = false; unsigned long growLightTime;	// Grow Light Supplier
+boolean is_irrigating = false; unsigned long IrrigationTime; int Total_Irrig_per_Day = 0; int Today = 0; // Irrigation
+boolean is_supplyingGrowLight = false; unsigned long growLightTime; // Grow Light Supplier
 boolean is_heating = false; boolean is_cooling = false;	// temperature keeper
 boolean is_Fanning = false; boolean is_Fogging = false;	// humidity keeper
 boolean is_Mixing = false; boolean fertilizer_added = false; unsigned long fertilizerTime;	// Mixer
+// Analog Sensors Noise Reduction
+int ldr_status = 0; unsigned long int ldr_first_attempt = 0; unsigned long int ldr_bank = 0;
+int smt_status = 0; unsigned long int smt_first_attempt = 0; unsigned long int smt_bank = 0;
+int fdt_status = 0; unsigned long int fdt_first_attempt = 0; unsigned long int fdt_bank = 0;
 // Serial [Event] Command Line Interface
 boolean debugMode = false;
 String inputString = "0";	// a string to hold incoming data
@@ -67,7 +73,7 @@ boolean parametering = false;
 void setup() {
  // the setup function runs once when you press reset or power the board
  #ifdef _Serial
- Serial.begin(BAUDRATE);
+  setupSerial();
  #endif
 // Initialize (Essential_Functions.h)
     // Writing Defult Presets to EEPROM
@@ -78,9 +84,10 @@ void setup() {
     initializeModules(); // (DHT, RTC/Time)
 	inputString.reserve(3); // Resrve 3 Chars for CLI
  #ifdef _Serial
- Serial.flush();
- Serial.end();
+  endSerial();
  #endif
+ updateNow();
+ Today = Now[2];
 }
 
 void loop() {
