@@ -1,4 +1,9 @@
 # Melon Green
+
+### [ discontinued ]
+Although the code may work properly;
+This repo is not maintained anymore.
+
 ### Greenhouse, Farm & Garden Automation Project
 To assist plant lovers & hobby gardeners, as well as greenhouse or garden keepers, Melon Green project is an open-source farm, garden and greenhouse automation controller system (hardware & software), which is aimed to be easy to use, affordable and multipurpose.   
 
